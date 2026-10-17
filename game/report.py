@@ -48,7 +48,7 @@ def render_final(game: Tycoon) -> str:
     best_day = max(game.history, key=lambda r: r.profit, default=None)
 
     lines = []
-    lines.append("══════════ 7 天经营战报 ══════════")
+    lines.append(f"══════════ {game.CHALLENGE_DAYS} 天经营战报 ══════════")
     lines.append(f"总利润：¥{total_profit:+.1f} ｜ 终局现金：¥{game.cash:.1f} ｜ 平均口碑：{avg_rep:.1f}")
     lines.append(f"评级：{grade} —— {title}")
     lines.append("")

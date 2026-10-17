@@ -106,6 +106,9 @@ def main() -> None:
 
     print()
     print(render_final(game))
+    print()
+    from .advisor import generate_plan, render_plan
+    print(render_plan(generate_plan(game)))
 
 
 if __name__ == "__main__":

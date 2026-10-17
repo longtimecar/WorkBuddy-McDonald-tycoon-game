@@ -1,0 +1,66 @@
+[
+  {
+    "id": "mm-save-40-6",
+    "name": "麦麦省满减券",
+    "kind": "full_reduction",
+    "threshold": 40,
+    "off": 6,
+    "desc": "满40减6，全场通用"
+  },
+  {
+    "id": "mm-save-30-4",
+    "name": "麦麦省满减券",
+    "kind": "full_reduction",
+    "threshold": 30,
+    "off": 4,
+    "desc": "满30减4，全场通用"
+  },
+  {
+    "id": "one-plus-one",
+    "name": "1+1随心配",
+    "kind": "fixed_combo",
+    "threshold": 0,
+    "off": 12.9,
+    "desc": "指定两件组合价 ¥12.9（红区+白区各一件）"
+  },
+  {
+    "id": "second-half",
+    "name": "第二份半价",
+    "kind": "percent_second",
+    "threshold": 0,
+    "off": 0.5,
+    "desc": "同款第二件半价"
+  },
+  {
+    "id": "burger-5off",
+    "name": "汉堡立减券",
+    "kind": "full_reduction",
+    "threshold": 20,
+    "off": 5,
+    "desc": "满20减5，汉堡类"
+  },
+  {
+    "id": "breakfast-card",
+    "name": "早餐卡",
+    "kind": "fixed_combo",
+    "threshold": 0,
+    "off": 9.9,
+    "desc": "早餐两件组合价 ¥9.9"
+  },
+  {
+    "id": "drink-upgrade",
+    "name": "饮品免费升大",
+    "kind": "free_upgrade",
+    "threshold": 0,
+    "off": 2,
+    "desc": "饮品免费升级大杯（省 ¥2）"
+  },
+  {
+    "id": "member-day-88",
+    "name": "会员日88折",
+    "kind": "percent_all",
+    "threshold": 0,
+    "off": 0.12,
+    "desc": "全场88折"
+  }
+]
