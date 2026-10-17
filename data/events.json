@@ -1,0 +1,190 @@
+[
+  {
+    "id": "rainstorm",
+    "name": "暴雨突袭",
+    "desc": "一场暴雨把门口淹成了小河，街上行人寥寥，只有外卖小哥在风雨里狂奔。",
+    "weight": 12,
+    "mood": "bad",
+    "effects": {
+      "traffic": 0.6,
+      "reputation": -1
+    }
+  },
+  {
+    "id": "heatwave",
+    "name": "高温红色预警",
+    "desc": "气温飙到39度，马路牙子晒得发烫，冰淇淋和冰可乐成了行人的救命稻草。",
+    "weight": 10,
+    "mood": "neutral",
+    "effects": {
+      "traffic": 0.9,
+      "market": 1.05
+    }
+  },
+  {
+    "id": "windstorm",
+    "name": "大风橙色预警",
+    "desc": "八九级大风刮得招牌直晃，共享单车倒成一片，没人想在这种天气出门。",
+    "weight": 9,
+    "mood": "bad",
+    "effects": {
+      "traffic": 0.7
+    }
+  },
+  {
+    "id": "rival_chicken",
+    "name": "炸鸡店开业",
+    "desc": "隔壁新开的炸鸡店开业大吉，大喇叭循环播放，传单塞满了你的取餐柜。",
+    "weight": 9,
+    "mood": "bad",
+    "effects": {
+      "traffic": 0.75,
+      "reputation": -1,
+      "market": 0.95
+    }
+  },
+  {
+    "id": "food_festival",
+    "name": "街道美食节",
+    "desc": "街道办起美食节，整条街彩旗招展，人流量肉眼可见地涨，隔壁摊位的香味一个劲往你店里钻。",
+    "weight": 8,
+    "mood": "neutral",
+    "effects": {
+      "traffic": 1.25
+    }
+  },
+  {
+    "id": "viral_video",
+    "name": "网红探店爆火",
+    "desc": "一条探店短视频突然爆了，评论区都在问地址，门口举手机拍照的人排到了街角。",
+    "weight": 5,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.6,
+      "reputation": 3,
+      "market": 1.05
+    }
+  },
+  {
+    "id": "member_day",
+    "name": "麦麦会员日",
+    "desc": "会员日大促，老客们掐着点来薅积分福利，取餐柜的小票堆成了小山。",
+    "weight": 13,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.3,
+      "market": 0.92,
+      "coupon_rage": true
+    }
+  },
+  {
+    "id": "coupon_day",
+    "name": "麦麦省发券日",
+    "desc": "麦麦省今天狂撒优惠券，人手一张满减券，柜台被「用券」的喊声淹没。",
+    "weight": 13,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.35,
+      "market": 0.9,
+      "coupon_rage": true
+    }
+  },
+  {
+    "id": "second_half",
+    "name": "第二份半价",
+    "desc": "第二份半价活动上线，饭搭子们集体出洞，薯条和甜筒的出货量直接翻倍。",
+    "weight": 11,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.2
+    }
+  },
+  {
+    "id": "price_up",
+    "name": "食材涨价",
+    "desc": "牛肉和食用油进价齐涨，供应商发来新价目表，你的利润正在原地蒸发。",
+    "weight": 10,
+    "mood": "bad",
+    "effects": {
+      "cost": 1.2,
+      "reputation": -1
+    }
+  },
+  {
+    "id": "fridge_broken",
+    "name": "冰箱罢工",
+    "desc": "冷柜半夜闹脾气罢工，一批薯条胚和鸡块差点报废，维修师傅说明天才到。",
+    "weight": 5,
+    "mood": "bad",
+    "effects": {
+      "cost": 1.1,
+      "traffic": 0.9,
+      "reputation": -3
+    }
+  },
+  {
+    "id": "staff_absent",
+    "name": "员工请假",
+    "desc": "两个员工同时请假，后厨只剩店长和一个暑假工，出餐速度肉眼可见地变慢。",
+    "weight": 9,
+    "mood": "neutral",
+    "effects": {
+      "traffic": 0.9,
+      "reputation": -1
+    }
+  },
+  {
+    "id": "rumor",
+    "name": "食安谣言",
+    "desc": "本地群里疯传你家后厨的「内部消息」，评论区已经开始替你写道歉信了。",
+    "weight": 4,
+    "mood": "bad",
+    "effects": {
+      "traffic": 0.7,
+      "reputation": -6
+    }
+  },
+  {
+    "id": "inspection",
+    "name": "卫生检查",
+    "desc": "卫生检查突击上门，锃亮的灶台和整齐的台账救了你，检查员满意地盖章。",
+    "weight": 7,
+    "mood": "good",
+    "effects": {
+      "reputation": 3
+    }
+  },
+  {
+    "id": "programmer_day",
+    "name": "1024程序员节",
+    "desc": "1024程序员节，格子衫大军扛着键盘来团建，夜宵档的汉堡和咖啡被扫空。",
+    "weight": 4,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.8,
+      "reputation": 2
+    }
+  },
+  {
+    "id": "lucky_cat",
+    "name": "流浪猫招财",
+    "desc": "一只流浪猫蹲在门口的地毯上睡觉，路人纷纷停下拍照，顺便点了个甜筒。",
+    "weight": 5,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.25,
+      "reputation": 2
+    }
+  },
+  {
+    "id": "kindergarten",
+    "name": "幼儿园包场",
+    "desc": "隔壁幼儿园春游顺路包场，四十个小朋友同时喊「我要薯条」，屋顶差点被掀翻。",
+    "weight": 5,
+    "mood": "good",
+    "effects": {
+      "traffic": 1.5,
+      "reputation": 1
+    }
+  }
+]
