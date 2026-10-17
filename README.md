@@ -4,9 +4,9 @@
 > 用麦当劳官方 MCP 的真实菜单经营你自己的店，LLM 顾客会点单、会吐槽、会用脚投票——
 > 每局结束，还你一份个性化省钱攻略。
 
-[🎮 在线试玩（GitHub Pages）](#)　[📺 视频演示](#)　[📖 中文](#中文说明)　[English](#english)
+[📺 视频演示](#)　[📖 中文](#中文说明)　[English](#english)
 
-![30 秒演示 GIF](./assets/demo.gif)
+> 🎮 在线试玩版制作中（GitHub Pages，10/18 上线）
 
 **非麦当劳官方产品，粉丝参赛作品**（麦当劳程序员节创意开发大赛）。餐品信息、价格及供应状态以麦当劳官方渠道实时结果为准。
 
@@ -30,7 +30,7 @@
 ### 30 秒上手
 
 ```bash
-git clone https://github.com/<你的账号>/WorkBuddy-McDonald-tycoon-game.git
+git clone https://github.com/longtimecar/WorkBuddy-McDonald-tycoon-game.git
 cd WorkBuddy-McDonald-tycoon-game
 python -m game
 ```
