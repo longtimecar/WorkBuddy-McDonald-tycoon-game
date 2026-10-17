@@ -16,13 +16,13 @@
 
 | Tool | 在游戏中的作用 |
 |---|---|
-| `query-meals` | 拉取当前门店可售菜单（分类、餐品编码），作为游戏经济系统的**真实菜单基础** |
-| `query-meal-detail` | 查询餐品套餐组成与可替换选项，用于游戏内"套餐组合"机制 |
-| `calculate-price` | 商品价格计算（商品金额/优惠/应付总价），用于校准游戏"市场价"与玩家定价的收益模型 |
-| `query-nearby-stores` | 查询附近门店，游戏开局时确定"我的店"所在商圈 |
+| `query-nearby-stores` | 按城市+关键词查门店，确定“我的店”所在商圈（`searchType=2` 时 city 与 keyword 必填） |
+| `query-meals` | **核心数据源**：一次返回全菜单——`data.categories[].meals[]` 给分类和餐品 code，`data.meals` 映射表给名称/现价/原价/优惠类型 |
+| `query-meal-detail` | 查询餐品套餐组成与可替换选项（游戏内“套餐组合”机制的可选增强） |
+| `calculate-price` | 商品价格计算（商品金额/优惠/应付总价），用于校准游戏“市场价”与玩家定价的收益模型 |
 | `campaign-calendar` | 麦当劳中国当月营销活动日历，是游戏**事件池的现实依据**（会员日、主题活动等均有现实原型） |
-| `list-nutrition-foods` | 餐品营养信息，游戏内"健康套餐"成就的数据来源 |
-| `available-coupons` / `auto-bind-coupons` | 麦麦省优惠券，驱动游戏内顾客"薅券"行为与"券后价"机制 |
+| `available-coupons` / `auto-bind-coupons` | 麦麦省优惠券，驱动游戏内顾客“薅券”行为与省钱攻略的券池 |
+| `list-nutrition-foods` | 餐品营养信息，游戏内“健康套餐”成就的数据来源 |
 | `now-time-info` | 获取当前时间，用于活动日历对齐与每日战报时间戳 |
 
 ## 3. 调用流程
@@ -30,15 +30,20 @@
 ```
 游戏启动
   ├─ live 模式（配置 MCD_MCP_TOKEN）
-  │    query-meals ──→ 真实菜单/价格 ──→ 游戏经济系统基础价
+  │    query-nearby-stores ──→ storeCode（真实门店）
+  │    query-meals ──→ 48 款真实菜单/现价 ──→ 游戏经济系统基础价（1 次调用拿全菜单）
   │    campaign-calendar ──→ 当月活动 ──→ 注入事件池
-  │    calculate-price ──→ 交叉验证玩家定价的优惠模型
+  │    available-coupons ──→ 真实可领券 ──→ 省钱攻略券池
   └─ mock 模式（无 Token）
        data/menu.snapshot.json 演示快照 ──→ 同样的经济系统
 玩家每日决策（定价 / 备货 / 营销）
   └─ 经营引擎模拟客流与顾客决策
-       └─ 日结算 + 口碑演化 + 战报图（传播素材）
+       └─ 日结算 + 口碑演化 + 省钱攻略 + 战报图（传播素材）
 ```
+
+> 实测备注：`query-meals` 的 `data.categories[].meals[]` 只含 `{code, tags}` 存根，
+> 价格信息在 `data.meals` 以 code 为键的映射表中；所有工具返回均为「markdown 说明 + 内嵌 JSON」，
+> 客户端用括号配平提取 JSON（见 `mcdmcp/client.py::_extract_json`）。
 
 ## 4. 业务价值
 

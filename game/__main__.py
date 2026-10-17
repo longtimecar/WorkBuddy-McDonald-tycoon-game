@@ -81,16 +81,17 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=None, help="固定随机种子")
     parser.add_argument("--demo", action="store_true", help="演示模式：薯条定价99元名场面")
     parser.add_argument("--live", action="store_true", help="连接麦当劳 MCP 拉取真实菜单")
+    parser.add_argument("--city", default="上海市", help="live 模式门店所在城市")
     parser.add_argument("--days", type=int, default=Tycoon.CHALLENGE_DAYS, help="挑战天数")
     args = parser.parse_args()
 
     client = MCDMCPClient(mock=not args.live)
-    menu = client.load_menu()
+    menu, source = client.load_game_menu(city=args.city)
     game = Tycoon(menu=menu, seed=args.seed)
     game.CHALLENGE_DAYS = max(1, args.days)
 
     print("🍔 麦当劳大亨 · WorkBuddy-McDonald-tycoon-game")
-    print(f"数据源：{client.status()} ｜ 菜单 {len(game.items)} 款 ｜ 挑战 {game.CHALLENGE_DAYS} 天")
+    print(f"数据源：{source} ｜ 菜单 {len(game.items)} 款 ｜ 挑战 {game.CHALLENGE_DAYS} 天")
     print("非麦当劳官方产品，粉丝参赛作品；演示数据以官方实时渠道为准。")
 
     if args.demo:
