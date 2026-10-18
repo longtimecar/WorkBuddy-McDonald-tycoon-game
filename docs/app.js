@@ -620,4 +620,9 @@
   initHome();
   bindToolbar();
   bindFinal();
+  if (reduceMotion) {
+    setTimeout(function () {
+      toast('检测到系统开启了「减少动态效果」，弹幕/粒子特效已自动关闭。开启路径：Windows 设置 → 辅助功能 → 视觉效果 → 动画效果');
+    }, 1200);
+  }
 })();
