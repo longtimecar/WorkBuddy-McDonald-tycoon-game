@@ -98,14 +98,15 @@ class Tycoon:
         return sum(vals) / len(vals)
 
     def suggest_stock(self) -> dict[str, int]:
-        """按昨日客流给一个备货默认值：按品类权重分配预期需求，
-        1.4 = 加购需求系数（实测 1.25 缺货偏多、1.8 报废翻倍，
-        1.4 利润最高且保留适度缺货戏剧性）。"""
-        last = self.history[-1].traffic if self.history else self.BASE_TRAFFIC
+        """按昨日成交给备货默认值：按品类权重分配预期需求。
+        成交率首日按 0.65 估计（真实菜单客单价高，成交率约六成），
+        1.6 = 加购需求系数（JS/Python 双端实测调优：利润最高且缺货适度）。"""
+        last = (self.history[-1].served if self.history
+                else int(self.BASE_TRAFFIC * 0.65))
         out = {}
         for c in self.by_cat:
             w = CATEGORY_WEIGHTS.get(c, 0.1)
-            out[c] = max(2, int(last * w * 1.4))
+            out[c] = max(2, int(last * w * 1.6))
         return out
 
     # ---------- 一天 ----------
