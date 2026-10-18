@@ -242,30 +242,40 @@
     100% { opacity: 0; transform: translate(-50%, -46px) scale(.94); }
   }
 
-  /* ---------- 弹幕层 ---------- */
-  #danmaku-layer { position: fixed; inset: 0; pointer-events: none; z-index: 15; overflow: hidden; }
+  /* ---------- 弹幕层（气泡炸场） ---------- */
+  #danmaku-layer { position: fixed; inset: 0; pointer-events: none; z-index: 30; overflow: hidden; }
   .danmaku {
     position: absolute; left: 0; top: 0;
-    white-space: nowrap; font-size: 15px; font-weight: 600; font-family: inherit;
-    padding: 4px 12px; border-radius: 999px;
-    will-change: transform;
-    animation-name: dmFly; animation-timing-function: linear; animation-fill-mode: both;
-    max-width: 82vw; overflow: hidden; text-overflow: ellipsis;
+    max-width: 74vw;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    padding: 5px 13px; border-radius: 999px;
+    opacity: 0;
+    will-change: transform, opacity;
   }
-  @keyframes dmFly {
-    from { transform: translate3d(100vw, 0, 0); }
-    to { transform: translate3d(calc(-100% - 100vw), 0, 0); }
+  .danmaku.pop { animation: dmPop .45s var(--ease-spring) both; }
+  .danmaku.hold { opacity: 1; }
+  .danmaku.out { animation: dmOut .4s var(--ease-out) both; }
+  @keyframes dmPop {
+    0% { opacity: 0; transform: scale(.2) translateY(14px); }
+    60% { opacity: 1; transform: scale(1.14) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
   }
-  .danmaku.happy { background: var(--green-soft); color: #2E7D32; border: 1.5px solid #97C459; }
-  .danmaku.angry { background: var(--red-soft); color: #C62828; border: 1.5px solid #F09595; }
+  @keyframes dmOut {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(.82) translateY(-10px); }
+  }
+  .danmaku.happy { background: var(--green-soft); color: #2E7D32; border: 1.5px solid #97C459; box-shadow: 0 3px 12px rgba(46,125,50,.18); }
+  .danmaku.angry { background: var(--red-soft); color: #C62828; border: 1.5px solid #F09595; box-shadow: 0 3px 12px rgba(218,41,28,.2); }
   .danmaku.neutral { background: #F1EFE8; color: #6B625B; border: 1.5px solid #D3D1C7; }
-  .danmaku.vip { font-size: 18px; padding: 6px 16px; box-shadow: 0 4px 16px rgba(31,26,23,.22); }
+  .danmaku.vip { font-size: 18px; padding: 7px 17px; }
   .danmaku.vip.happy { background: #639922; color: #fff; border-color: #97C459; }
   .danmaku.vip.angry { background: #DA291C; color: #fff; border-color: #F09595; }
+  .danmaku.vip.neutral { background: #5F5E5A; color: #fff; }
 
   /* 暴走连击徽标 */
   #combo-badge {
-    position: fixed; top: 64px; left: 14px; z-index: 20;
+    position: fixed; top: 64px; left: 14px; z-index: 40;
     background: linear-gradient(160deg, #DA291C, #8E1408);
     color: #fff; font-weight: 700; font-size: 15px;
     border-radius: 999px; padding: 8px 16px;
@@ -280,8 +290,8 @@
 
   /* 暴走红晕 */
   #rage-vignette {
-    position: fixed; inset: 0; z-index: 12; pointer-events: none; opacity: 0;
-    background: radial-gradient(ellipse at center, transparent 46%, rgba(218,41,28,.30) 100%);
+    position: fixed; inset: 0; z-index: 25; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 42%, rgba(218,41,28,.32) 100%);
     transition: opacity .5s ease;
   }
   #rage-vignette.on { opacity: 1; }
@@ -294,6 +304,49 @@
     40% { transform: translate(4px, -2px); }
     60% { transform: translate(-3px, -1px); }
     80% { transform: translate(3px, 1px); }
+  }
+
+  /* ---------- 粒子与光效 ---------- */
+  .fx-particle {
+    position: fixed; z-index: 35; pointer-events: none;
+    font-size: 22px; will-change: transform, opacity;
+    animation: fxFloat 1.1s var(--ease-out) both;
+  }
+  @keyframes fxFloat {
+    0% { opacity: 0; transform: translate(0, 0) scale(.4); }
+    20% { opacity: 1; transform: translate(var(--dx, 0), var(--dy, -30px)) scale(1.15); }
+    100% { opacity: 0; transform: translate(var(--dx, 0), var(--dy, -90px)) scale(.9); }
+  }
+  .gold-sweep {
+    position: fixed; inset: 0; z-index: 28; pointer-events: none; overflow: hidden;
+  }
+  .gold-sweep::before {
+    content: ""; position: absolute; top: -60%; left: -60%;
+    width: 40%; height: 220%;
+    background: linear-gradient(105deg, transparent, rgba(255, 236, 170, .55), transparent);
+    transform: rotate(18deg);
+    animation: sweepMove 1.1s var(--ease-out) both;
+  }
+  @keyframes sweepMove { to { left: 130%; } }
+  .glow-ring {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(from 0deg, transparent 0%, rgba(255, 199, 44, .95) 12%, transparent 27%, transparent 100%);
+    -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
+    mask: radial-gradient(circle, transparent 62%, #000 64%);
+    animation: ringSpin 2.2s linear infinite;
+  }
+  @keyframes ringSpin { to { transform: rotate(360deg); } }
+  .emoji-rain {
+    position: fixed; inset: 0; z-index: 32; pointer-events: none; overflow: hidden;
+  }
+  .emoji-rain i {
+    position: absolute; top: -8vh; font-size: 26px; font-style: normal;
+    animation: rainFall linear both;
+  }
+  @keyframes rainFall {
+    0% { opacity: 0; transform: translateY(0) rotate(0); }
+    8% { opacity: 1; }
+    100% { opacity: .9; transform: translateY(115vh) rotate(240deg); }
   }
 
   /* ---------- 日报 ---------- */
@@ -329,7 +382,7 @@
   .quote.angry .mood { color: var(--mcd-red); }
 
   /* ---------- 战报 ---------- */
-  .final-hero { text-align: center; padding: 28px 0 8px; }
+  .final-hero { text-align: center; padding: 28px 0 8px; position: relative; }
   .grade-badge {
     display: inline-flex; align-items: center; justify-content: center;
     width: 86px; height: 86px; border-radius: 50%;
@@ -337,6 +390,7 @@
     background: linear-gradient(160deg, var(--mcd-yellow), var(--mcd-yellow-dark));
     box-shadow: 0 6px 20px rgba(245,180,0,.35);
     animation: gradeIn .7s var(--ease-spring) both;
+    position: relative; isolation: isolate;
   }
   @keyframes gradeIn { from { opacity: 0; transform: scale(.2) rotate(-30deg); } to { opacity: 1; transform: none; } }
   .grade-badge.s { background: linear-gradient(160deg, #FFD54D, #F5A623); }
@@ -539,7 +593,6 @@
 <div id="rage-vignette"></div>
 <div id="danmaku-layer"></div>
 <div id="combo-badge">😡 暴走 ×0</div>
-
 <script src="data.js"></script>
 <script src="tycoon.js"></script>
 <script src="app.js"></script>

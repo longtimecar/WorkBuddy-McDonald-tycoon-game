@@ -240,9 +240,17 @@
     $('btn-run-day').addEventListener('click', runDay);
   }
 
-  // ---------- 弹幕系统 ----------
+  // ---------- 弹幕系统（气泡炸场） ----------
   var dmTimers = [];
   var dmCombo = 0;
+  var dmActive = false;
+  var DM_CELLS = []; // 预生成网格坐标，保证铺满又不重叠
+  (function () {
+    var cols = 3, rows = 7;
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+      DM_CELLS.push({ x: 6 + c * (88 / cols) + (Math.random() - .5) * 8, y: 10 + r * (76 / rows) + (Math.random() - .5) * 6 });
+    }
+  })();
 
   function buildDanmakuPlan(report) {
     var plan = [];
@@ -252,7 +260,7 @@
     var neutralPool = MCD_DATA.taunts.high_price || [];
     var total = Math.max(1, report.praises + report.angries);
     var angryRatio = report.angries / total;
-    var TOTAL = 28;
+    var TOTAL = 30;
     for (var i = 0; i < TOTAL; i++) {
       var r = Math.random();
       if (r < angryRatio) plan.push({ text: pick(angryPool), mood: 'angry' });
@@ -267,24 +275,24 @@
   }
   function pick(pool) { return pool.length ? pool[Math.floor(Math.random() * pool.length)] : '（沉默）'; }
 
-  function spawnDanmaku(item, opts) {
-    opts = opts || {};
+  function spawnDanmaku(item, cell, vip) {
     var layer = $('danmaku-layer');
     if (!layer) return null;
-    var d = el('div', 'danmaku ' + (item.mood === 'happy' ? 'happy' : item.mood === 'angry' ? 'angry' : 'neutral') + (opts.vip ? ' vip' : ''));
+    var d = el('div', 'danmaku ' + (item.mood === 'happy' ? 'happy' : item.mood === 'angry' ? 'angry' : 'neutral') + (vip ? ' vip' : ''));
     d.appendChild(el('span', 'm', item.mood === 'happy' ? '😍' : item.mood === 'angry' ? '😡' : '💬'));
     d.appendChild(document.createTextNode(' ' + item.text));
-    var lanes = opts.lanes || 8;
-    var lane = Math.floor(Math.random() * lanes);
-    d.style.top = (12 + lane * (78 / lanes) + (Math.random() - 0.5) * 2.2) + '%';
-    d.style.animationDuration = (opts.duration || (3.2 + Math.random() * 2.2)) + 's';
+    d.style.left = cell.x + '%';
+    d.style.top = cell.y + '%';
     layer.appendChild(d);
-    d.addEventListener('animationend', function () { if (d.parentNode) d.parentNode.removeChild(d); });
+    d.classList.add('pop');
+    var life = 1500 + Math.random() * 900;
+    setTimeout(function () { if (d.classList) d.classList.add('out'); }, life);
+    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, life + 420);
     return d;
   }
 
   function updateCombo(mood) {
-    if (mood !== 'angry') return;
+    if (mood !== 'angry' || !dmActive) return;
     dmCombo++;
     var badge = $('combo-badge');
     if (!badge) return;
@@ -296,6 +304,7 @@
   function clearDanmaku() {
     dmTimers.forEach(clearTimeout); dmTimers = [];
     dmCombo = 0;
+    dmActive = false;
     var layer = $('danmaku-layer');
     if (layer) layer.innerHTML = '';
     var badge = $('combo-badge');
@@ -304,50 +313,100 @@
     if (vg) vg.classList.remove('on');
     var app = document.getElementById('app');
     if (app) app.classList.remove('shake');
+    var rain = document.querySelector('.emoji-rain');
+    if (rain) rain.parentNode.removeChild(rain);
   }
 
   function launchDanmakuStorm(report) {
     clearDanmaku();
     if (reduceMotion) return;
+    dmActive = true;
     var plan = buildDanmakuPlan(report);
     var angryCount = plan.filter(function (p) { return p.mood === 'angry'; }).length;
     var vg = $('rage-vignette');
-    if (vg && angryCount >= plan.length * 0.45) vg.classList.add('on');
+    if (vg && angryCount >= plan.length * 0.4) vg.classList.add('on');
     var app = document.getElementById('app');
+    var cellIdx = 0;
     plan.forEach(function (item, i) {
-      var vip = (i % 5 === 2);
+      var vip = (i % 6 === 3);
+      var cell = DM_CELLS[cellIdx % DM_CELLS.length];
+      cellIdx += (i % 3 === 2) ? 2 : 1; // 错开取格，先铺满再叠第二轮
       dmTimers.push(setTimeout(function () {
-        spawnDanmaku(item, { vip: vip });
+        spawnDanmaku(item, cell, vip);
         updateCombo(item.mood);
-        // 暴走高峰：两次微震
         if (app && angryCount >= 10 && (i === Math.floor(plan.length * 0.45) || i === Math.floor(plan.length * 0.8))) {
           app.classList.remove('shake'); void app.offsetWidth; app.classList.add('shake');
         }
-      }, 320 + i * 90));
+      }, 260 + i * 105));
     });
   }
 
-  // 终局战报：金色弹幕谢幕（只飞顶部航道，不挡阅读）
+  // ---------- 粒子 / 光效 ----------
+  function spawnParticles(emojis, count, originEl, spread) {
+    if (reduceMotion) return;
+    var rect = originEl && originEl.getBoundingClientRect ? originEl.getBoundingClientRect() : null;
+    var ox = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    var oy = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    for (var i = 0; i < count; i++) {
+      (function (i) {
+        setTimeout(function () {
+          var p = el('span', 'fx-particle', emojis[i % emojis.length]);
+          p.style.left = ox + 'px';
+          p.style.top = oy + 'px';
+          var ang = -Math.PI / 2 + (Math.random() - .5) * 2.2;
+          var dist = (spread || 110) * (.5 + Math.random());
+          p.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+          p.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+          document.body.appendChild(p);
+          setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 1250);
+        }, i * 60);
+      })(i);
+    }
+  }
+
+  function goldSweep() {
+    if (reduceMotion) return;
+    var s = el('div', 'gold-sweep');
+    document.body.appendChild(s);
+    setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 1300);
+  }
+
+  function emojiRain(emojis, count) {
+    if (reduceMotion) return;
+    var box = el('div', 'emoji-rain');
+    for (var i = 0; i < count; i++) {
+      var e = document.createElement('i');
+      e.textContent = emojis[i % emojis.length];
+      e.style.left = Math.random() * 96 + 'vw';
+      e.style.animationDuration = (2.2 + Math.random() * 1.8) + 's';
+      e.style.animationDelay = (Math.random() * 1.2) + 's';
+      box.appendChild(e);
+    }
+    document.body.appendChild(box);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 5200);
+  }
+
+  // 终局战报：当日名场面气泡谢幕（只飞顶部航道，不挡阅读）
   function launchEncoreDanmaku(fr) {
     if (reduceMotion) return;
     var pool = [];
-    fr.history.forEach(function (r) {
-      r.samples.forEach(function (s) { pool.push(s); });
-    });
+    fr.history.forEach(function (r) { r.samples.forEach(function (s) { pool.push(s); }); });
     if (!pool.length) return;
-    var golden = pool.slice(0, 6);
+    var golden = pool.slice(0, 5);
     golden.forEach(function (s, i) {
       setTimeout(function () {
+        if (!$('screen-final').classList.contains('active')) return;
         var layer = $('danmaku-layer');
-        if (!layer || !$('screen-final').classList.contains('active')) return;
-        var d = el('div', 'danmaku vip ' + (s[0] === 'happy' ? 'happy' : 'angry'));
+        if (!layer) return;
+        var d = el('div', 'danmaku vip ' + (s[0] === 'happy' ? 'happy' : 'angry') + ' pop');
         d.appendChild(el('span', 'm', s[0] === 'happy' ? '😍' : '😡'));
         d.appendChild(document.createTextNode(' ' + s[1]));
-        d.style.top = (8 + Math.random() * 14) + '%';
-        d.style.animationDuration = '5.2s';
+        d.style.left = (8 + Math.random() * 70) + '%';
+        d.style.top = (6 + Math.random() * 10) + '%';
         layer.appendChild(d);
-        d.addEventListener('animationend', function () { if (d.parentNode) d.parentNode.removeChild(d); });
-      }, 600 + i * 650);
+        setTimeout(function () { if (d.classList) d.classList.add('out'); }, 1600);
+        setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 2100);
+      }, 700 + i * 600);
     });
   }
 
@@ -389,6 +448,7 @@
   }
 
   function renderReport(r) {
+    dmActive = false;
     var badge = $('combo-badge');
     if (badge) badge.classList.remove('show');
     $('report-day-title').textContent = '第 ' + r.day + ' 天 · 日报';
@@ -402,6 +462,10 @@
     var pv = $('r-profit');
     pv.textContent = (r.profit >= 0 ? '+' : '') + fmt(r.profit);
     pv.className = 'v' + (r.profit < 0 ? ' neg' : '') + (reduceMotion ? '' : ' pop');
+    if (!reduceMotion) {
+      if (r.profit >= 500) setTimeout(function () { spawnParticles(['💰', '✨', '🪙'], 7, pv, 120); }, 500);
+      else if (r.profit < 0) setTimeout(function () { spawnParticles(['💸', '😭'], 5, pv, 90); }, 500);
+    }
     $('r-detail').textContent = '营收 ' + fmt(r.revenue) + ' ｜ 食材 ' + fmt(r.cogs)
       + ' ｜ 报废 ' + fmt(r.waste) + ' ｜ 营销 ' + fmt0(r.marketing_cost);
     $('r-rep').textContent = '口碑 ' + r.rep_before.toFixed(1) + ' → ' + r.rep_after.toFixed(1)
@@ -444,7 +508,24 @@
     var badge = $('final-grade');
     badge.textContent = fr.grade;
     badge.className = 'grade-badge ' + fr.grade.toLowerCase();
+    badge.innerHTML = '';
+    badge.appendChild(document.createTextNode(fr.grade));
+    if (!reduceMotion && badge.parentNode) {
+      var ring = el('span', 'glow-ring');
+      ring.style.left = (badge.offsetLeft - 12) + 'px';
+      ring.style.top = (badge.offsetTop - 12) + 'px';
+      ring.style.width = (badge.offsetWidth + 24) + 'px';
+      ring.style.height = (badge.offsetHeight + 24) + 'px';
+      badge.parentNode.appendChild(ring);
+    }
     $('final-title').textContent = fr.grade_title;
+    goldSweep();
+    if (!reduceMotion) {
+      setTimeout(function () { spawnParticles(['⭐', '✨', '🍔'], 9, badge, 140); }, 450);
+      if (fr.grade === 'S' || fr.grade === 'A') {
+        emojiRain(['🎉', '⭐', '🍔', '✨'], 16);
+      }
+    }
     countUp($('final-profit'), fr.total_profit, 900, fr.total_profit >= 0 ? '+¥' : '-¥');
     countUp($('final-cash'), fr.cash, 900, '¥');
     countUp($('final-rep'), fr.avg_rep, 900);

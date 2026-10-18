@@ -1,7 +1,7 @@
 // 最小 DOM 桩：跑通 app.js 全部流程
 function makeEl(id) {
   const el = {
-    id, children: [], listeners: {}, style: {}, dataset: {}, _text: '', _html: '',
+    id, children: [], listeners: {}, style: { setProperty() {} }, dataset: {}, _text: '', _html: '',
     classList: {
       _set: new Set(),
       add(c) { this._set.add(c); }, remove(c) { this._set.delete(c); }, contains(c) { return this._set.has(c); }
@@ -28,6 +28,7 @@ global.document = {
   getElementById: id => registry[id] || null,
   createElement: tag => makeEl('dyn-' + tag),
   createTextNode: t => ({ text: t }),
+  querySelector: () => null,
   querySelectorAll: sel => {
     if (sel === '.screen') return ids.filter(i => i.startsWith('screen-')).map(i => registry[i]);
     return [];
