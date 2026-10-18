@@ -77,11 +77,18 @@
   }
 
   // ---------- 首页 ----------
+  function urlSeed() {
+    try {
+      var m = /[?&]seed=(\d+)/.exec(window.location.search);
+      return m ? parseInt(m[1], 10) : null;
+    } catch (e) { return null; }
+  }
+
   function initHome() {
     var n = MCD_DATA.menu.length;
     $('home-menu-badge').textContent = '真实菜单 ' + n + ' 款';
     $('btn-start').addEventListener('click', function () {
-      game = new MCD.Tycoon();
+      game = new MCD.Tycoon(null, urlSeed());
       setup = { marketing: 0 };
       renderDay();
       show('screen-day');
@@ -394,11 +401,12 @@
       else { renderDay(); show('screen-day'); }
     });
     $('btn-restart').addEventListener('click', function () {
-      game = new MCD.Tycoon(null, Math.floor(Math.random() * 1e9));
+      var seed = urlSeed();
+      game = new MCD.Tycoon(null, seed !== null ? seed : Math.floor(Math.random() * 1e9));
       setup = { marketing: 0 };
       renderDay();
       show('screen-day');
-      toast('新的一局，祝你好运');
+      toast(seed !== null ? '同一剧本重开（seed ' + seed + '）' : '新的一局，祝你好运');
     });
     $('btn-copy').addEventListener('click', function () {
       var text = $('share-text').textContent;
