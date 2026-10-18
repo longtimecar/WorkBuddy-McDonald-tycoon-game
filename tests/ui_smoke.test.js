@@ -66,13 +66,22 @@ const mktRows = R['mkt-list'].children;
 mktRows[1].click();
 console.log('4. 选营销档 OK');
 
-// 5. 营业 → 日报
+// 5. 营业 → 日报（含弹幕风暴断言）
 R['btn-run-day'].click();
+// 5a. 营业中（1.5s）：弹幕密度 + 连击徽标
+setTimeout(() => {
+  const dmMid = R['danmaku-layer'].children.length;
+  console.log('5a. 营业中弹幕密度:', dmMid, '条 |', dmMid >= 5 ? 'PASS' : 'FAIL',
+    '| 连击徽标:', R['combo-badge'].textContent,
+    '| 显示中:', R['combo-badge'].classList.contains('show') ? '是' : '否');
+}, 1500);
 setTimeout(() => {
   console.log('5. 营业动画后屏:', R['screen-report'].classList.contains('active') ? 'report OK' : 'FAIL');
   console.log('   日报: 客流', R['r-traffic'].textContent, '| 成交', R['r-served'].textContent,
     '| 利润', R['r-profit'].textContent, '| 销冠', R['r-best'].textContent);
   console.log('   顾客吐槽条数:', R['quote-list'].children.length);
+  console.log('   弹幕累计生成:', R['danmaku-layer'].children.length, '条 |',
+    '| 日报后徽标按设计隐藏:', !R['combo-badge'].classList.contains('show') ? 'PASS' : 'FAIL');
 
   // 6. 连过 7 天到战报
   for (let d = 1; d < 7; d++) {

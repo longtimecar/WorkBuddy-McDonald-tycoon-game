@@ -98,6 +98,7 @@
 
   // ---------- 每日备战 ----------
   function renderDay() {
+    clearDanmaku();
     var d = game.day + 1;
     $('day-title').textContent = '第 ' + d + ' / ' + MCD.CHALLENGE_DAYS + ' 天';
     $('day-source').textContent = MCD_DATA.menuSource || '演示菜单';
@@ -239,9 +240,121 @@
     $('btn-run-day').addEventListener('click', runDay);
   }
 
+  // ---------- 弹幕系统 ----------
+  var dmTimers = [];
+  var dmCombo = 0;
+
+  function buildDanmakuPlan(report) {
+    var plan = [];
+    report.samples.forEach(function (s) { plan.push({ text: s[1], mood: s[0] }); });
+    var angryPool = (MCD_DATA.taunts.high_price || []).concat(MCD_DATA.taunts.queue || [], MCD_DATA.taunts.stockout || []);
+    var happyPool = (MCD_DATA.taunts.good_value || []).concat(MCD_DATA.taunts.rep_high || [], MCD_DATA.taunts.craving || []);
+    var neutralPool = MCD_DATA.taunts.high_price || [];
+    var total = Math.max(1, report.praises + report.angries);
+    var angryRatio = report.angries / total;
+    var TOTAL = 28;
+    for (var i = 0; i < TOTAL; i++) {
+      var r = Math.random();
+      if (r < angryRatio) plan.push({ text: pick(angryPool), mood: 'angry' });
+      else if (r < angryRatio + (1 - angryRatio) * 0.7) plan.push({ text: pick(happyPool), mood: 'happy' });
+      else plan.push({ text: pick(neutralPool), mood: 'neutral' });
+    }
+    for (var j = plan.length - 1; j > 0; j--) {
+      var k = Math.floor(Math.random() * (j + 1));
+      var tmp = plan[j]; plan[j] = plan[k]; plan[k] = tmp;
+    }
+    return plan;
+  }
+  function pick(pool) { return pool.length ? pool[Math.floor(Math.random() * pool.length)] : '（沉默）'; }
+
+  function spawnDanmaku(item, opts) {
+    opts = opts || {};
+    var layer = $('danmaku-layer');
+    if (!layer) return null;
+    var d = el('div', 'danmaku ' + (item.mood === 'happy' ? 'happy' : item.mood === 'angry' ? 'angry' : 'neutral') + (opts.vip ? ' vip' : ''));
+    d.appendChild(el('span', 'm', item.mood === 'happy' ? '😍' : item.mood === 'angry' ? '😡' : '💬'));
+    d.appendChild(document.createTextNode(' ' + item.text));
+    var lanes = opts.lanes || 8;
+    var lane = Math.floor(Math.random() * lanes);
+    d.style.top = (12 + lane * (78 / lanes) + (Math.random() - 0.5) * 2.2) + '%';
+    d.style.animationDuration = (opts.duration || (3.2 + Math.random() * 2.2)) + 's';
+    layer.appendChild(d);
+    d.addEventListener('animationend', function () { if (d.parentNode) d.parentNode.removeChild(d); });
+    return d;
+  }
+
+  function updateCombo(mood) {
+    if (mood !== 'angry') return;
+    dmCombo++;
+    var badge = $('combo-badge');
+    if (!badge) return;
+    badge.textContent = '😡 暴走 ×' + dmCombo;
+    badge.classList.add('show');
+    badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump');
+  }
+
+  function clearDanmaku() {
+    dmTimers.forEach(clearTimeout); dmTimers = [];
+    dmCombo = 0;
+    var layer = $('danmaku-layer');
+    if (layer) layer.innerHTML = '';
+    var badge = $('combo-badge');
+    if (badge) badge.classList.remove('show');
+    var vg = $('rage-vignette');
+    if (vg) vg.classList.remove('on');
+    var app = document.getElementById('app');
+    if (app) app.classList.remove('shake');
+  }
+
+  function launchDanmakuStorm(report) {
+    clearDanmaku();
+    if (reduceMotion) return;
+    var plan = buildDanmakuPlan(report);
+    var angryCount = plan.filter(function (p) { return p.mood === 'angry'; }).length;
+    var vg = $('rage-vignette');
+    if (vg && angryCount >= plan.length * 0.45) vg.classList.add('on');
+    var app = document.getElementById('app');
+    plan.forEach(function (item, i) {
+      var vip = (i % 5 === 2);
+      dmTimers.push(setTimeout(function () {
+        spawnDanmaku(item, { vip: vip });
+        updateCombo(item.mood);
+        // 暴走高峰：两次微震
+        if (app && angryCount >= 10 && (i === Math.floor(plan.length * 0.45) || i === Math.floor(plan.length * 0.8))) {
+          app.classList.remove('shake'); void app.offsetWidth; app.classList.add('shake');
+        }
+      }, 320 + i * 90));
+    });
+  }
+
+  // 终局战报：金色弹幕谢幕（只飞顶部航道，不挡阅读）
+  function launchEncoreDanmaku(fr) {
+    if (reduceMotion) return;
+    var pool = [];
+    fr.history.forEach(function (r) {
+      r.samples.forEach(function (s) { pool.push(s); });
+    });
+    if (!pool.length) return;
+    var golden = pool.slice(0, 6);
+    golden.forEach(function (s, i) {
+      setTimeout(function () {
+        var layer = $('danmaku-layer');
+        if (!layer || !$('screen-final').classList.contains('active')) return;
+        var d = el('div', 'danmaku vip ' + (s[0] === 'happy' ? 'happy' : 'angry'));
+        d.appendChild(el('span', 'm', s[0] === 'happy' ? '😍' : '😡'));
+        d.appendChild(document.createTextNode(' ' + s[1]));
+        d.style.top = (8 + Math.random() * 14) + '%';
+        d.style.animationDuration = '5.2s';
+        layer.appendChild(d);
+        d.addEventListener('animationend', function () { if (d.parentNode) d.parentNode.removeChild(d); });
+      }, 600 + i * 650);
+    });
+  }
+
   // ---------- 营业动画 → 日报 ----------
   function runDay() {
     var report = game.run_day(setup.marketing);
+    clearDanmaku();
     show('screen-run');
     $('run-sub').textContent = report.events.length
       ? '今日事件：' + report.events.map(function (e) { return e.name; }).join('、')
@@ -259,13 +372,8 @@
     }
     requestAnimationFrame(tick);
 
-    // 顾客吐槽气泡按时间轴飘出
-    if (!reduceMotion && report.samples.length) {
-      report.samples.forEach(function (s, i) {
-        setTimeout(function () { spawnBubble(s); }, 350 + i * 420);
-      });
-    }
-    setTimeout(function () { renderReport(report); show('screen-report'); }, DUR + 350);
+    launchDanmakuStorm(report);
+    setTimeout(function () { renderReport(report); show('screen-report'); }, DUR + 400);
   }
 
   function spawnBubble(sample) {
@@ -281,6 +389,8 @@
   }
 
   function renderReport(r) {
+    var badge = $('combo-badge');
+    if (badge) badge.classList.remove('show');
     $('report-day-title').textContent = '第 ' + r.day + ' 天 · 日报';
     countUp($('report-cash'), game.cash, 700, '¥');
     countUp($('r-traffic'), r.traffic, 600);
@@ -390,6 +500,7 @@
     $('share-text').textContent = lines.join('\n');
 
     show('screen-final');
+    launchEncoreDanmaku(fr);
   }
 
   function bindFinal() {

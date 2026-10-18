@@ -217,10 +217,10 @@
 
   /* ---------- 营业中 ---------- */
   #screen-run { text-align: center; padding-top: 56px; }
-  .run-title { font-size: 20px; font-weight: 700; animation: heroIn .5s var(--ease-spring) both; }
-  .run-sub { color: var(--ink-2); font-size: 13px; margin-top: 6px; min-height: 22px; animation: heroIn .5s var(--ease-out) .1s both; }
-  .run-counter { font-size: 46px; font-weight: 700; color: var(--mcd-red); margin: 24px 0 2px; font-variant-numeric: tabular-nums; }
-  .run-label { font-size: 12.5px; color: var(--ink-2); }
+  .run-title { font-size: 20px; font-weight: 700; animation: heroIn .5s var(--ease-spring) both; position: relative; z-index: 20; text-shadow: 0 2px 12px rgba(250,246,239,.9); }
+  .run-sub { color: var(--ink-2); font-size: 13px; margin-top: 6px; min-height: 22px; animation: heroIn .5s var(--ease-out) .1s both; position: relative; z-index: 20; text-shadow: 0 2px 12px rgba(250,246,239,.9); }
+  .run-counter { font-size: 46px; font-weight: 700; color: var(--mcd-red); margin: 24px 0 2px; font-variant-numeric: tabular-nums; position: relative; z-index: 20; text-shadow: 0 2px 16px rgba(250,246,239,.95), 0 0 34px rgba(255,199,44,.5); }
+  .run-label { font-size: 12.5px; color: var(--ink-2); position: relative; z-index: 20; text-shadow: 0 2px 12px rgba(250,246,239,.9); }
   .run-track { height: 8px; background: var(--line); border-radius: 4px; margin: 20px auto 0; max-width: 320px; overflow: hidden; }
   .run-track i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--mcd-yellow), var(--mcd-yellow-dark)); border-radius: 4px; }
   #run-bubbles { position: relative; height: 118px; margin-top: 16px; overflow: hidden; }
@@ -240,6 +240,60 @@
     18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
     80% { opacity: 1; }
     100% { opacity: 0; transform: translate(-50%, -46px) scale(.94); }
+  }
+
+  /* ---------- 弹幕层 ---------- */
+  #danmaku-layer { position: fixed; inset: 0; pointer-events: none; z-index: 15; overflow: hidden; }
+  .danmaku {
+    position: absolute; left: 0; top: 0;
+    white-space: nowrap; font-size: 15px; font-weight: 600; font-family: inherit;
+    padding: 4px 12px; border-radius: 999px;
+    will-change: transform;
+    animation-name: dmFly; animation-timing-function: linear; animation-fill-mode: both;
+    max-width: 82vw; overflow: hidden; text-overflow: ellipsis;
+  }
+  @keyframes dmFly {
+    from { transform: translate3d(100vw, 0, 0); }
+    to { transform: translate3d(calc(-100% - 100vw), 0, 0); }
+  }
+  .danmaku.happy { background: var(--green-soft); color: #2E7D32; border: 1.5px solid #97C459; }
+  .danmaku.angry { background: var(--red-soft); color: #C62828; border: 1.5px solid #F09595; }
+  .danmaku.neutral { background: #F1EFE8; color: #6B625B; border: 1.5px solid #D3D1C7; }
+  .danmaku.vip { font-size: 18px; padding: 6px 16px; box-shadow: 0 4px 16px rgba(31,26,23,.22); }
+  .danmaku.vip.happy { background: #639922; color: #fff; border-color: #97C459; }
+  .danmaku.vip.angry { background: #DA291C; color: #fff; border-color: #F09595; }
+
+  /* 暴走连击徽标 */
+  #combo-badge {
+    position: fixed; top: 64px; left: 14px; z-index: 20;
+    background: linear-gradient(160deg, #DA291C, #8E1408);
+    color: #fff; font-weight: 700; font-size: 15px;
+    border-radius: 999px; padding: 8px 16px;
+    box-shadow: 0 6px 20px rgba(218,41,28,.45);
+    opacity: 0; transform: scale(.6);
+    transition: opacity .25s ease, transform .25s var(--ease-spring);
+    pointer-events: none;
+  }
+  #combo-badge.show { opacity: 1; transform: scale(1); }
+  #combo-badge.bump { animation: comboBump .3s var(--ease-spring); }
+  @keyframes comboBump { 40% { transform: scale(1.18); } }
+
+  /* 暴走红晕 */
+  #rage-vignette {
+    position: fixed; inset: 0; z-index: 12; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 46%, rgba(218,41,28,.30) 100%);
+    transition: opacity .5s ease;
+  }
+  #rage-vignette.on { opacity: 1; }
+
+  /* 屏幕微震 */
+  .shake { animation: shake .38s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-4px, 2px); }
+    40% { transform: translate(4px, -2px); }
+    60% { transform: translate(-3px, -1px); }
+    80% { transform: translate(3px, 1px); }
   }
 
   /* ---------- 日报 ---------- */
@@ -482,6 +536,9 @@
 
 </div>
 <div id="toast-root"></div>
+<div id="rage-vignette"></div>
+<div id="danmaku-layer"></div>
+<div id="combo-badge">😡 暴走 ×0</div>
 
 <script src="data.js"></script>
 <script src="tycoon.js"></script>
