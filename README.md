@@ -6,7 +6,7 @@
 
 [📺 视频演示](#)　[📖 中文](#中文说明)　[English](#english)
 
-> 🎮 在线试玩版制作中（GitHub Pages，10/18 上线）
+> 🎮 **[在线试玩（无需安装，打开即玩）](https://longtimecar.github.io/WorkBuddy-McDonald-tycoon-game/)** —— 手机也能玩
 
 **非麦当劳官方产品，粉丝参赛作品**（麦当劳程序员节创意开发大赛）。餐品信息、价格及供应状态以麦当劳官方渠道实时结果为准。
 
@@ -21,7 +21,7 @@
 《麦当劳大亨》是一个**餐厅经营模拟游戏**：你接手一家麦当劳，每天做三个决定——**定价、备货、营销**，然后看着真实菜单数据驱动的顾客们用脚投票。
 
 - 🥤 菜单和价格来自**麦当劳中国官方 MCP**（`query-meals` / `calculate-price`），不是编的；
-- 🤬 LLM 顾客会点单、会吐槽、会因为你把薯条定价 99 元喷上差评热搜（**离线模式**无需 API Key 照样玩）；
+- 🤬 顾客会点单、会吐槽，会因为你把薯条定价 99 元喷上差评热搜（98 条离线吐槽语料，无需 API Key 照样玩；LLM 顾客增强中）；
 - 🎲 随机事件：暴雨、竞对开业、网红探店、1024 程序员节彩蛋……
 - 💰 **每局结束自动生成「本周麦门省钱攻略」**：根据你的消费习惯算最优券组合，star 收藏的是这份攻略；
 - 📈 每日经营战报自动出图，截图即社交素材；
@@ -46,7 +46,7 @@ python -m game --demo   # 薯条定价 99 元，看顾客暴走 + 省钱攻略
 | 入口 | 命令 / 方式 | 适合谁 |
 |---|---|---|
 | CLI | `python -m game` | 开发者，终端里直接玩 |
-| Web | 打开 `docs/index.html`（GitHub Pages） | 所有人，打开即玩 |
+| Web | [在线试玩](https://longtimecar.github.io/WorkBuddy-McDonald-tycoon-game/)（或直接打开 `docs/index.html`） | 所有人，打开即玩 |
 | Skill | `cp -r skills/mcd-tycoon-strategist ~/.workbuddy/skills/` | AI 玩家，自然语言开局 |
 
 ### 安装为 WorkBuddy Skill

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麦当劳大亨 · 玩 7 天麦当劳，顺手省出一只巨无霸</title>
+<meta name="description" content="基于麦当劳 MCP 真实菜单的模拟经营游戏：定价、备货、营销，7 天挑战，看看你能把店开成什么样。">
+<style>
+  :root {
+    --mcd-red: #DA291C;
+    --mcd-red-dark: #B01E14;
+    --mcd-yellow: #FFC72C;
+    --mcd-yellow-dark: #F5B400;
+    --ink: #1F1A17;
+    --ink-2: #6B625B;
+    --paper: #FAF6EF;
+    --card: #FFFFFF;
+    --line: #EDE4D8;
+    --green: #2E7D32;
+    --red-soft: #FCEBEB;
+    --green-soft: #EAF3DE;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  #app { max-width: 600px; margin: 0 auto; padding: 0 14px 60px; }
+
+  .screen { display: none; animation: fadeUp .35s ease both; }
+  .screen.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- 通用 ---------- */
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 18px;
+    margin-top: 14px;
+    box-shadow: 0 1px 3px rgba(31,26,23,.06);
+  }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card h3 .tag { font-size: 11px; font-weight: 400; color: var(--ink-2); }
+  .btn {
+    display: block; width: 100%; border: none; cursor: pointer;
+    border-radius: 14px; padding: 15px 20px;
+    font-size: 16px; font-weight: 600; font-family: inherit;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--mcd-red); color: #fff; box-shadow: 0 4px 14px rgba(218,41,28,.28); }
+  .btn-primary:hover { background: var(--mcd-red-dark); }
+  .btn-yellow { background: var(--mcd-yellow); color: var(--ink); box-shadow: 0 4px 14px rgba(255,199,44,.35); }
+  .btn-ghost { background: transparent; color: var(--ink-2); border: 1.5px solid var(--line); font-weight: 400; font-size: 14px; padding: 11px; }
+  .muted { color: var(--ink-2); font-size: 13px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .grow { flex: 1; }
+
+  /* ---------- 首页 ---------- */
+  .hero {
+    background: linear-gradient(160deg, var(--mcd-red) 0%, var(--mcd-red-dark) 100%);
+    border-radius: 0 0 28px 28px;
+    margin: 0 -14px;
+    padding: 44px 22px 34px;
+    text-align: center;
+    color: #fff;
+  }
+  .hero .arches { width: 74px; height: 52px; margin-bottom: 14px; }
+  .hero h1 { font-size: 30px; font-weight: 700; letter-spacing: 1px; }
+  .hero .slogan { font-size: 15px; opacity: .92; margin-top: 8px; }
+  .hero .badges { display: flex; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .hero .badge {
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px; padding: 4px 12px; font-size: 12px;
+  }
+  .feat { display: flex; gap: 12px; padding: 12px 4px; border-bottom: 1px dashed var(--line); }
+  .feat:last-child { border-bottom: none; }
+  .feat .icon {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+  }
+  .feat .t { font-weight: 600; font-size: 14px; }
+  .feat .d { font-size: 12.5px; color: var(--ink-2); }
+  .disclaimer { font-size: 11.5px; color: var(--ink-2); text-align: center; margin-top: 18px; line-height: 1.7; }
+
+  /* ---------- 顶部状态条 ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(250,246,239,.92); backdrop-filter: blur(8px);
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 0 10px; margin-bottom: 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .day { font-weight: 700; font-size: 16px; }
+  .topbar .stat { font-size: 12.5px; color: var(--ink-2); text-align: right; line-height: 1.35; }
+  .topbar .stat b { color: var(--ink); font-size: 13.5px; }
+  .rep-bar { width: 64px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .rep-bar i { display: block; height: 100%; background: var(--mcd-yellow); border-radius: 3px; transition: width .5s ease; }
+
+  /* ---------- 定价表 ---------- */
+  .cat-head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin: 14px 2px 8px; font-weight: 600; font-size: 13.5px;
+  }
+  .cat-head .n { color: var(--ink-2); font-weight: 400; font-size: 12px; }
+  .price-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px dashed var(--line);
+  }
+  .price-row:last-child { border-bottom: none; }
+  .price-row .nm { flex: 1; font-size: 13.5px; min-width: 0; }
+  .price-row .nm .mk { display: block; font-size: 11px; color: var(--ink-2); }
+  .price-row .nm .mk s { text-decoration: line-through; }
+  .price-row input[type=number] {
+    width: 76px; padding: 7px 8px; text-align: right;
+    border: 1.5px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-family: inherit; background: #fff; color: var(--ink);
+  }
+  .price-row input[type=number]:focus { outline: none; border-color: var(--mcd-yellow-dark); }
+  .price-row .pct { font-size: 11px; width: 42px; text-align: right; }
+  .pct.down { color: var(--green); }
+  .pct.up { color: var(--mcd-red); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .toolbar .chip {
+    border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+    padding: 6px 13px; font-size: 12.5px; cursor: pointer; font-family: inherit; color: var(--ink);
+  }
+  .toolbar .chip:active { transform: scale(.95); }
+  .toolbar .chip.hot { border-color: var(--mcd-yellow-dark); background: #FFF8E6; }
+
+  .attr-readout {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #FFF8E6; border: 1px solid #F5E3B3; border-radius: 12px;
+    padding: 10px 14px; margin-top: 12px; font-size: 13px;
+  }
+  .attr-readout b { font-size: 17px; }
+
+  /* ---------- 备货 / 营销 ---------- */
+  .stock-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .stock-row:last-child { border-bottom: none; }
+  .stock-row .nm { flex: 1; font-size: 13.5px; }
+  .stock-row input { width: 84px; padding: 7px 8px; text-align: right; border: 1.5px solid var(--line); border-radius: 9px; font-size: 14px; font-family: inherit; }
+  .mkt-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px;
+    border: 1.5px solid var(--line); border-radius: 12px; margin-top: 8px; cursor: pointer;
+  }
+  .mkt-row.sel { border-color: var(--mcd-red); background: var(--red-soft); }
+  .mkt-row .nm { flex: 1; font-size: 13.5px; font-weight: 500; }
+  .mkt-row .cost { font-size: 12.5px; color: var(--ink-2); }
+
+  /* ---------- 营业中 ---------- */
+  #screen-run { text-align: center; padding-top: 60px; }
+  .run-title { font-size: 20px; font-weight: 700; }
+  .run-sub { color: var(--ink-2); font-size: 13px; margin-top: 6px; }
+  .run-counter { font-size: 44px; font-weight: 700; color: var(--mcd-red); margin: 26px 0 4px; font-variant-numeric: tabular-nums; }
+  .run-label { font-size: 12.5px; color: var(--ink-2); }
+  .run-track { height: 8px; background: var(--line); border-radius: 4px; margin: 22px auto 0; max-width: 320px; overflow: hidden; }
+  .run-track i { display: block; height: 100%; width: 0; background: var(--mcd-yellow); border-radius: 4px; transition: width .15s linear; }
+
+  /* ---------- 日报 ---------- */
+  .report-event {
+    background: #FFF8E6; border: 1px solid #F5E3B3; border-radius: 12px;
+    padding: 10px 14px; font-size: 13px; margin-bottom: 12px;
+  }
+  .report-event .ev { font-weight: 600; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-grid .cell { background: var(--paper); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .stat-grid .cell .v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-grid .cell .k { font-size: 11px; color: var(--ink-2); }
+  .stat-grid .cell.bad .v { color: var(--mcd-red); }
+  .profit-line {
+    display: flex; align-items: baseline; justify-content: center; gap: 8px;
+    margin: 16px 0 4px;
+  }
+  .profit-line .v { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .profit-line .v.neg { color: var(--mcd-red); }
+  .profit-line .k { font-size: 13px; color: var(--ink-2); }
+  .quote { padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13px; display: flex; gap: 8px; }
+  .quote:last-child { border-bottom: none; }
+  .quote .mood { flex-shrink: 0; }
+  .quote.happy .mood { color: var(--green); }
+  .quote.angry .mood { color: var(--mcd-red); }
+
+  /* ---------- 战报 ---------- */
+  .final-hero { text-align: center; padding: 26px 0 6px; }
+  .grade-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 84px; height: 84px; border-radius: 50%;
+    font-size: 40px; font-weight: 700; color: #fff;
+    background: linear-gradient(160deg, var(--mcd-yellow), var(--mcd-yellow-dark));
+    box-shadow: 0 6px 20px rgba(245,180,0,.35);
+  }
+  .grade-badge.s { background: linear-gradient(160deg, #FFD54D, #F5A623); }
+  .grade-badge.a { background: linear-gradient(160deg, #DA291C, #B01E14); box-shadow: 0 6px 20px rgba(218,41,28,.3); }
+  .grade-badge.b { background: linear-gradient(160deg, #378ADD, #185FA5); box-shadow: 0 6px 20px rgba(24,95,165,.3); }
+  .grade-badge.c { background: linear-gradient(160deg, #888780, #5F5E5A); }
+  .grade-title { font-size: 17px; font-weight: 700; margin-top: 12px; }
+  .final-nums { display: flex; justify-content: center; gap: 22px; margin-top: 14px; }
+  .final-nums .item { text-align: center; }
+  .final-nums .item .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .final-nums .item .k { font-size: 11.5px; color: var(--ink-2); }
+  .chart-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11.5px; }
+  .chart-row .d { width: 34px; color: var(--ink-2); flex-shrink: 0; }
+  .chart-row .bar { height: 15px; border-radius: 4px; background: var(--mcd-red); min-width: 2px; transition: width .6s ease; }
+  .chart-row .bar.neg { background: var(--mcd-yellow-dark); }
+  .chart-row .v { width: 62px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .plan-basket { font-size: 13px; background: var(--paper); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+  .plan-combo { font-size: 14px; font-weight: 600; color: var(--green); margin: 6px 0; }
+  .plan-actions { font-size: 13px; padding-left: 18px; }
+  .plan-actions li { margin: 4px 0; }
+  .share-box {
+    background: var(--paper); border: 1px dashed var(--line); border-radius: 12px;
+    padding: 12px 14px; font-size: 13px; white-space: pre-wrap; word-break: break-all;
+    max-height: 180px; overflow: auto;
+  }
+  .footer-note { text-align: center; font-size: 11.5px; color: var(--ink-2); margin-top: 26px; line-height: 1.8; }
+  .footer-note a { color: var(--mcd-red); text-decoration: none; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ========== 首页 ========== -->
+  <section id="screen-home" class="screen active">
+    <div class="hero">
+      <svg class="arches" viewBox="0 0 100 70" aria-label="金色拱门">
+        <path d="M12 64 C12 26 44 26 44 64" fill="none" stroke="#FFC72C" stroke-width="11" stroke-linecap="round"/>
+        <path d="M56 64 C56 26 88 26 88 64" fill="none" stroke="#FFC72C" stroke-width="11" stroke-linecap="round"/>
+      </svg>
+      <h1>麦当劳大亨</h1>
+      <div class="slogan">玩 7 天麦当劳，顺手省出一只巨无霸</div>
+      <div class="badges">
+        <span class="badge" id="home-menu-badge">菜单加载中…</span>
+        <span class="badge">7 天经营挑战</span>
+        <span class="badge">顾客会吐槽</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="feats">
+        <div class="feat">
+          <div class="icon" style="background:var(--red-soft)">🍔</div>
+          <div><div class="t">真实菜单开局</div><div class="d">餐品和价格来自麦当劳 MCP 实时拉取，不是你编的</div></div>
+        </div>
+        <div class="feat">
+          <div class="icon" style="background:#FFF3D6">💰</div>
+          <div><div class="t">定价 × 备货 × 营销</div><div class="d">每个决策都影响客流、口碑和报废，顾客用脚投票</div></div>
+        </div>
+        <div class="feat">
+          <div class="icon" style="background:var(--green-soft)">🎫</div>
+          <div><div class="t">局局产出省钱攻略</div><div class="d">根据你这局的表现，算出真正划算的券组合</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary" id="btn-start">开始 7 天挑战</button>
+      <p class="disclaimer">
+        非麦当劳官方产品，粉丝参赛作品（WorkBuddy × 麦当劳 1024 程序员节）；<br>
+        演示数据以官方实时渠道为准 · 源代码开源 · 手机横竖屏都能玩
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== 每日备战 ========== -->
+  <section id="screen-day" class="screen">
+    <div class="topbar">
+      <div class="grow">
+        <div class="day" id="day-title">第 1 天</div>
+        <div class="muted" id="day-source">菜单来源</div>
+      </div>
+      <div class="stat">
+        <div>现金 <b id="day-cash">¥5000</b></div>
+        <div class="row" style="justify-content:flex-end">口碑 <b id="day-rep">70</b><span class="rep-bar"><i id="day-rep-bar"></i></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>💰 今日定价 <span class="tag">改价会影响吸引力与顾客评价</span></h3>
+      <div class="toolbar" style="margin-bottom:10px">
+        <button class="chip" id="btn-reset-price">恢复市场价</button>
+        <button class="chip" id="btn-discount10">全场 9 折</button>
+        <button class="chip hot" id="btn-fries99">🍟 薯条 99 元</button>
+      </div>
+      <div id="price-list"></div>
+      <div class="attr-readout">
+        <span>整体定价吸引力</span><b id="attr-value">1.00</b>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📦 今日备货 <span class="tag">按品类备，生鲜报废 30% / 饮品甜品 10%</span></h3>
+      <div id="stock-list"></div>
+      <button class="btn btn-ghost" id="btn-suggest-stock" style="margin-top:12px">按昨日成交推荐备货</button>
+    </div>
+
+    <div class="card">
+      <h3>📣 营销投入 <span class="tag">花钱买客流</span></h3>
+      <div id="mkt-list"></div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-run-day" style="margin-top:16px">开始营业</button>
+  </section>
+
+  <!-- ========== 营业中 ========== -->
+  <section id="screen-run" class="screen">
+    <div class="run-title">🍔 营业中…</div>
+    <div class="run-sub" id="run-sub">顾客正在进店</div>
+    <div class="run-counter" id="run-counter">0</div>
+    <div class="run-label">今日客流</div>
+    <div class="run-track"><i id="run-progress"></i></div>
+  </section>
+
+  <!-- ========== 日报 ========== -->
+  <section id="screen-report" class="screen">
+    <div class="topbar">
+      <div class="grow"><div class="day" id="report-day-title">第 1 天 · 日报</div></div>
+      <div class="stat">现金 <b id="report-cash">¥5000</b></div>
+    </div>
+    <div class="card">
+      <div id="report-events"></div>
+      <div class="stat-grid">
+        <div class="cell"><div class="v" id="r-traffic">0</div><div class="k">客流</div></div>
+        <div class="cell"><div class="v" id="r-served">0</div><div class="k">成交</div></div>
+        <div class="cell bad"><div class="v" id="r-stockout">0</div><div class="k">缺货流失</div></div>
+        <div class="cell bad"><div class="v" id="r-queue">0</div><div class="k">排队暴走</div></div>
+        <div class="cell"><div class="v" id="r-praise">0</div><div class="k">被夸</div></div>
+        <div class="cell bad"><div class="v" id="r-angry">0</div><div class="k">被喷</div></div>
+      </div>
+      <div class="profit-line"><span class="v" id="r-profit">¥0</span><span class="k">今日利润（含房租 ¥200）</span></div>
+      <p class="muted" style="text-align:center" id="r-detail">营收 ¥0 ｜ 食材 ¥0 ｜ 报废 ¥0</p>
+      <p class="muted" style="text-align:center;margin-top:6px" id="r-rep">口碑 70 → 70</p>
+      <p class="muted" style="text-align:center" id="r-best">今日销冠：—</p>
+    </div>
+    <div class="card" id="quotes-card">
+      <h3>💬 顾客说</h3>
+      <div id="quote-list"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-next-day" style="margin-top:16px">下一天</button>
+  </section>
+
+  <!-- ========== 终局战报 ========== -->
+  <section id="screen-final" class="screen">
+    <div class="final-hero">
+      <div class="grade-badge" id="final-grade">A</div>
+      <div class="grade-title" id="final-title">金牌店长</div>
+      <div class="final-nums">
+        <div class="item"><div class="v" id="final-profit">¥0</div><div class="k">7 天总利润</div></div>
+        <div class="item"><div class="v" id="final-cash">¥0</div><div class="k">终局现金</div></div>
+        <div class="item"><div class="v" id="final-rep">0</div><div class="k">平均口碑</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📈 每日营收曲线</h3>
+      <div id="final-chart"></div>
+      <p class="muted" style="margin-top:10px" id="final-highlights"></p>
+    </div>
+
+    <div class="card">
+      <h3>🎫 本周麦门省钱攻略 <span class="tag">根据你这局生成</span></h3>
+      <div id="final-plan"></div>
+    </div>
+
+    <div class="card">
+      <h3>📋 分享战绩</h3>
+      <div class="share-box" id="share-text"></div>
+      <button class="btn btn-yellow" id="btn-copy" style="margin-top:12px">复制战绩文案</button>
+    </div>
+
+    <button class="btn btn-primary" id="btn-restart" style="margin-top:16px">再来一局</button>
+    <p class="footer-note">
+      麦当劳大亨 · WorkBuddy × 麦当劳 1024 程序员节参赛作品<br>
+      <a href="https://github.com/longtimecar/WorkBuddy-McDonald-tycoon-game" target="_blank" rel="noopener">查看源代码 ★</a>
+      ｜ 命令行版：<code>python -m game</code>
+    </p>
+  </section>
+
+</div>
+
+<script src="data.js"></script>
+<script src="tycoon.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
