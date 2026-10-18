@@ -34,6 +34,22 @@ _CATEGORY_KEYWORDS = {
     "breakfast": ["早餐"],
 }
 
+# 游戏分类 ← 菜品名 的关键词映射（优先；MCP 分类名极不可靠，实测
+# "麦咖啡™美式" 被归进小食类，只能按菜品名里的词判定）
+_ITEM_CATEGORY_KEYWORDS = {
+    "breakfast": ["早餐", "猪柳", "柳蛋", "豆浆", "油条", "热香饼", "早晨"],
+    "dessert": ["甜筒", "圣代", "冰淇淋", "冰淇凌", "麦旋风", "蛋挞", "布丁", "蛋糕", "派"],
+    "drink": ["美式", "拿铁", "摩卡", "咖啡", "可乐", "雪碧", "红茶", "绿茶", "果汁", "鲜橙", "雪梨", "饮料"],
+    "burger": ["汉堡", "牛堡", "鸡腿堡", "吉士堡", "堡"],
+    # side 兜底：薯、鸡块、翅、拼盘、套餐等
+}
+
+# 非餐品过滤：周边商品与单卖酱料不进游戏菜单
+_NON_FOOD_PATTERNS = ["徽章", "帽", "贴纸", "贴", "捶", "挠", "玩偶", "周边", "收藏", "手办"]
+
+# 游戏需要的全部品类（缺的由演示快照补全，保证顾客模型五类齐全）
+GAME_CATEGORIES = ["burger", "side", "drink", "dessert", "breakfast"]
+
 
 class MCDMCPError(RuntimeError):
     pass
@@ -201,7 +217,7 @@ class MCDMCPClient:
         items: list[dict] = []
         seen: set[str] = set()
         for cat in categories:
-            game_cat = self._map_category(cat.get("name", ""))
+            cat_name = cat.get("name", "")
             for stub in cat.get("meals") or []:
                 code = stub.get("code")
                 if not code or code in seen or len(items) >= max_items:
@@ -218,10 +234,12 @@ class MCDMCPClient:
                 tags = list(stub.get("tags") or [])
                 if info.get("discountType"):
                     tags.append(info["discountType"])
+                if not self._is_food(name, tags):
+                    continue  # 周边/徽章/酱料等非餐品不入游戏菜单
                 items.append({
                     "id": code,
                     "name": name,
-                    "category": game_cat,
+                    "category": self._map_item_category(name, cat_name),
                     # MCP 不含成本价，按市场价 55% 估算（游戏假设，README 有对照表）
                     "cost": round(price * 0.55, 1),
                     "market": price,
@@ -246,18 +264,55 @@ class MCDMCPClient:
                 return game_cat
         return "side"
 
+    @staticmethod
+    def _is_food(name: str, tags: list) -> bool:
+        """过滤非餐品：周边商品（徽章/帽子/贴纸/痒痒挠）与单卖酱料。"""
+        if any(p in name for p in _NON_FOOD_PATTERNS):
+            return False
+        if name.rstrip("）)").endswith("酱"):
+            return False
+        return True
+
+    @staticmethod
+    def _map_item_category(name: str, cat_name: str) -> str:
+        """按菜品名判定品类（优先），分类名兜底。实测 MCP 分类名极不可靠
+        （麦咖啡美式曾被归进小食），菜品名里的关键词才准确。"""
+        for game_cat, kws in _ITEM_CATEGORY_KEYWORDS.items():
+            if any(k in name for k in kws):
+                return game_cat
+        return MCDMCPClient._map_category(cat_name)
+
     def status(self) -> str:
         return "mock（演示快照）" if self.mock else "live（麦当劳 MCP 直连）"
 
     # ---------- 游戏数据入口 ----------
     def load_game_menu(self, city: str = "上海市", keyword: str = "麦当劳") -> tuple[list[dict], str]:
-        """返回 (菜单, 数据源说明)。live 失败自动回落演示快照。"""
+        """返回 (菜单, 数据源说明)。live 失败自动回落演示快照。
+
+        live 菜单若缺少游戏所需的品类（如该门店没返甜品/早餐），
+        用演示快照对应品类补全，并在数据源说明里注明，保证顾客模型五类齐全。
+        """
         if not self.mock:
             try:
                 items = self.load_menu(city, keyword)
                 if items:
-                    return items, f"live · 麦当劳 MCP 真实菜单（{city}）"
+                    items, note = self._fill_missing_categories(items)
+                    return items, f"live · 麦当劳 MCP 真实菜单（{city}）{note}"
             except Exception:
                 pass
         with open(DATA_DIR / "menu.snapshot.json", encoding="utf-8") as f:
             return json.load(f), "mock · 演示快照"
+
+    @staticmethod
+    def _fill_missing_categories(items: list[dict]) -> tuple[list[dict], str]:
+        have = {it["category"] for it in items}
+        missing = [c for c in GAME_CATEGORIES if c not in have]
+        if not missing:
+            return items, ""
+        with open(DATA_DIR / "menu.snapshot.json", encoding="utf-8") as f:
+            snap = json.load(f)
+        fill = [it for it in snap if it["category"] in missing]
+        label = {"burger": "汉堡", "side": "小食", "drink": "饮品",
+                 "dessert": "甜品", "breakfast": "早餐"}
+        note = "（" + "/".join(label[c] for c in missing) + "品类为演示补充）"
+        return items + fill, note

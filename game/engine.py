@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from .customers import run_customers
+from .customers import CATEGORY_WEIGHTS, run_customers
 from .data import load_json
 from .events import combine, roll_events
 
@@ -98,9 +98,15 @@ class Tycoon:
         return sum(vals) / len(vals)
 
     def suggest_stock(self) -> dict[str, int]:
-        """按昨日客流给一个备货默认值。"""
+        """按昨日客流给一个备货默认值：按品类权重分配预期需求，
+        1.4 = 加购需求系数（实测 1.25 缺货偏多、1.8 报废翻倍，
+        1.4 利润最高且保留适度缺货戏剧性）。"""
         last = self.history[-1].traffic if self.history else self.BASE_TRAFFIC
-        return {c: int(last * 0.55) for c in self.by_cat}
+        out = {}
+        for c in self.by_cat:
+            w = CATEGORY_WEIGHTS.get(c, 0.1)
+            out[c] = max(2, int(last * w * 1.4))
+        return out
 
     # ---------- 一天 ----------
     def run_day(self, marketing: int = 0) -> DayReport:
