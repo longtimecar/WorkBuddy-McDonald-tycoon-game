@@ -5,6 +5,8 @@
   var $ = function (id) { return document.getElementById(id); };
   var game = null;
   var setup = { marketing: 0 };
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
   // ---------- 工具 ----------
   function fmt(n) { return '¥' + (Math.round(n * 10) / 10).toLocaleString('zh-CN'); }
@@ -22,6 +24,58 @@
     return e;
   }
 
+  /* Toast 轻提示 */
+  function toast(text) {
+    var root = $('toast-root');
+    if (!root) return;
+    var t = el('div', 'toast', text);
+    root.appendChild(t);
+    setTimeout(function () {
+      t.classList.add('out');
+      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 260);
+    }, 1900);
+  }
+
+  /* 数字滚动动画 */
+  function countUp(elm, target, duration, prefix) {
+    if (!elm) return;
+    if (reduceMotion) { elm.textContent = (prefix || '') + Math.round(target).toLocaleString('zh-CN'); return; }
+    var t0 = null;
+    function tick(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / (duration || 700));
+      var eased = 1 - Math.pow(1 - p, 3);
+      elm.textContent = (prefix || '') + Math.round(target * eased).toLocaleString('zh-CN');
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  /* 滚动揭示（首页特性卡） */
+  function initReveal() {
+    if (typeof IntersectionObserver === 'undefined') {
+      var all = document.querySelectorAll('.reveal');
+      for (var i = 0; i < all.length; i++) all[i].classList.add('in');
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(function (n) { io.observe(n); });
+  }
+
+  /* 按钮按下反馈 */
+  function bindPress(btn) {
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      btn.classList.remove('pressed');
+      void btn.offsetWidth;
+      btn.classList.add('pressed');
+    });
+  }
+
   // ---------- 首页 ----------
   function initHome() {
     var n = MCD_DATA.menu.length;
@@ -32,6 +86,7 @@
       renderDay();
       show('screen-day');
     });
+    initReveal();
   }
 
   // ---------- 每日备战 ----------
@@ -39,9 +94,11 @@
     var d = game.day + 1;
     $('day-title').textContent = '第 ' + d + ' / ' + MCD.CHALLENGE_DAYS + ' 天';
     $('day-source').textContent = MCD_DATA.menuSource || '演示菜单';
-    $('day-cash').textContent = fmt0(game.cash);
+    countUp($('day-cash'), game.cash, 600, '¥');
     $('day-rep').textContent = Math.round(game.reputation);
-    $('day-rep-bar').style.width = game.reputation + '%';
+    var bar = $('day-rep-bar');
+    bar.style.width = game.reputation + '%';
+    bar.className = game.reputation < 60 ? 'low' : (game.reputation < 80 ? 'mid' : 'high');
 
     renderPrices();
     renderStock();
@@ -56,8 +113,7 @@
     cats.forEach(function (cat) {
       var items = game.by_cat[cat];
       if (!items || !items.length) return;
-      var head = el('div', 'cat-head',
-        MCD.CATEGORY_LABEL[cat] + '（' + items.length + ' 款）');
+      var head = el('div', 'cat-head', MCD.CATEGORY_LABEL[cat] + '（' + items.length + ' 款）');
       box.appendChild(head);
       items.forEach(function (it) {
         var row = el('div', 'price-row');
@@ -73,17 +129,22 @@
         input.value = game.prices[it.id];
         input.dataset.id = it.id;
         var pct = el('span', 'pct');
-        function refresh() {
+        function paintPct(v) {
+          var r = v / it.market;
+          pct.textContent = (r <= 1 ? '' : '+') + Math.round((r - 1) * 100) + '%';
+          pct.className = 'pct ' + (r < 1 ? 'down' : 'up');
+        }
+        paintPct(game.prices[it.id]);
+        input.addEventListener('input', function () {
           var v = parseFloat(input.value);
           if (!isNaN(v)) {
             game.set_price(it.id, v);
-            var r = v / it.market;
-            pct.textContent = (r <= 1 ? '' : '+') + Math.round((r - 1) * 100) + '%';
-            pct.className = 'pct ' + (r < 1 ? 'down' : 'up');
-            updateAttr();
+            paintPct(v);
+            row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+            pct.classList.remove('bump'); void pct.offsetWidth; pct.classList.add('bump');
+            updateAttr(true);
           }
-        }
-        input.addEventListener('input', refresh);
+        });
         row.appendChild(nm); row.appendChild(input); row.appendChild(pct);
         box.appendChild(row);
       });
@@ -117,9 +178,11 @@
     [0, 1, 2, 3].forEach(function (lv) {
       var m = MCD.MARKETING[lv];
       var row = el('div', 'mkt-row' + (setup.marketing === lv ? ' sel' : ''));
+      row.appendChild(el('div', 'radio'));
       row.appendChild(el('div', 'nm', labels[lv]));
       row.appendChild(el('div', 'cost', m[0] === 0 ? '免费' : fmt0(m[0]) + ' · 客流×' + m[1]));
       row.addEventListener('click', function () {
+        if (setup.marketing !== lv) toast('已选：' + labels[lv]);
         setup.marketing = lv;
         renderMarketing();
       });
@@ -127,48 +190,46 @@
     });
   }
 
-  function updateAttr() {
-    $('attr-value').textContent = game.price_attractiveness().toFixed(2);
+  function updateAttr(pulse) {
+    var elm = $('attr-value');
+    elm.textContent = game.price_attractiveness().toFixed(2);
+    if (pulse && !reduceMotion) {
+      elm.classList.remove('pulse'); void elm.offsetWidth; elm.classList.add('pulse');
+    }
   }
 
   function bindToolbar() {
+    bindPress($('btn-reset-price'));
+    bindPress($('btn-suggest-stock'));
+    bindPress($('btn-run-day'));
     $('btn-reset-price').addEventListener('click', function () {
       game.reset_prices_to_market();
       renderPrices(); updateAttr();
+      toast('已恢复市场价');
     });
     $('btn-discount10').addEventListener('click', function () {
       game.items.forEach(function (it) {
         game.set_price(it.id, Math.round(it.market * 0.9 * 10) / 10);
       });
-      renderPrices(); updateAttr();
+      renderPrices(); updateAttr(true);
+      toast('全场 9 折，顾客钱包在笑');
     });
     $('btn-fries99').addEventListener('click', function () {
       var hit = 0;
       game.items.forEach(function (it) {
         if (it.name.indexOf('薯') >= 0) { game.set_price(it.id, 99); hit++; }
       });
-      renderPrices(); updateAttr();
-      if (hit) flashTip('已把 ' + hit + ' 款薯制品定价 99 元，祝你好运 🍟');
+      renderPrices(); updateAttr(true);
+      if (hit) toast('已把 ' + hit + ' 款薯制品定价 99 元，祝你好运 🍟');
+      else toast('这家店没有薯制品可祸祸');
     });
     $('btn-suggest-stock').addEventListener('click', function () {
       var sug = game.suggest_stock();
       for (var c in sug) game.set_stock(c, sug[c]);
       renderStock();
-      flashTip('已按昨日成交推荐备货');
+      toast('已按昨日成交推荐备货');
     });
     $('btn-run-day').addEventListener('click', runDay);
-  }
-
-  var tipTimer = null;
-  function flashTip(text) {
-    var tip = $('day-source');
-    tip.textContent = text;
-    tip.style.color = 'var(--mcd-red)';
-    clearTimeout(tipTimer);
-    tipTimer = setTimeout(function () {
-      tip.textContent = MCD_DATA.menuSource || '演示菜单';
-      tip.style.color = '';
-    }, 2200);
   }
 
   // ---------- 营业动画 → 日报 ----------
@@ -178,32 +239,52 @@
     $('run-sub').textContent = report.events.length
       ? '今日事件：' + report.events.map(function (e) { return e.name; }).join('、')
       : '平平无奇的一天';
+    $('run-bubbles').innerHTML = '';
     var counter = $('run-counter'), bar = $('run-progress');
     counter.textContent = '0'; bar.style.width = '0%';
-    var t0 = null, DUR = 1300;
+    var t0 = null, DUR = reduceMotion ? 200 : 1400;
     function tick(ts) {
       if (!t0) t0 = ts;
       var p = Math.min(1, (ts - t0) / DUR);
-      counter.textContent = Math.round(report.traffic * p);
+      counter.textContent = Math.round(report.traffic * p).toLocaleString('zh-CN');
       bar.style.width = (p * 100) + '%';
       if (p < 1) requestAnimationFrame(tick);
-      else setTimeout(function () { renderReport(report); show('screen-report'); }, 180);
     }
     requestAnimationFrame(tick);
+
+    // 顾客吐槽气泡按时间轴飘出
+    if (!reduceMotion && report.samples.length) {
+      report.samples.forEach(function (s, i) {
+        setTimeout(function () { spawnBubble(s); }, 350 + i * 420);
+      });
+    }
+    setTimeout(function () { renderReport(report); show('screen-report'); }, DUR + 350);
+  }
+
+  function spawnBubble(sample) {
+    var wrap = $('run-bubbles');
+    if (!wrap) return;
+    var b = el('div', 'bubble ' + (sample[0] === 'happy' ? 'happy' : 'angry'));
+    b.appendChild(el('span', 'm', sample[0] === 'happy' ? '😍' : '😡'));
+    b.appendChild(document.createTextNode(sample[1]));
+    var jitter = (Math.random() - 0.5) * 30;
+    b.style.marginLeft = jitter + 'px';
+    wrap.appendChild(b);
+    setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 2400);
   }
 
   function renderReport(r) {
     $('report-day-title').textContent = '第 ' + r.day + ' 天 · 日报';
-    $('report-cash').textContent = fmt0(game.cash);
-    $('r-traffic').textContent = r.traffic;
-    $('r-served').textContent = r.served;
-    $('r-stockout').textContent = r.stockouts;
-    $('r-queue').textContent = r.queue_angry;
-    $('r-praise').textContent = r.praises;
-    $('r-angry').textContent = r.angries;
+    countUp($('report-cash'), game.cash, 700, '¥');
+    countUp($('r-traffic'), r.traffic, 600);
+    countUp($('r-served'), r.served, 600);
+    countUp($('r-stockout'), r.stockouts, 600);
+    countUp($('r-queue'), r.queue_angry, 600);
+    countUp($('r-praise'), r.praises, 600);
+    countUp($('r-angry'), r.angries, 600);
     var pv = $('r-profit');
     pv.textContent = (r.profit >= 0 ? '+' : '') + fmt(r.profit);
-    pv.className = 'v' + (r.profit < 0 ? ' neg' : '');
+    pv.className = 'v' + (r.profit < 0 ? ' neg' : '') + (reduceMotion ? '' : ' pop');
     $('r-detail').textContent = '营收 ' + fmt(r.revenue) + ' ｜ 食材 ' + fmt(r.cogs)
       + ' ｜ 报废 ' + fmt(r.waste) + ' ｜ 营销 ' + fmt0(r.marketing_cost);
     $('r-rep').textContent = '口碑 ' + r.rep_before.toFixed(1) + ' → ' + r.rep_after.toFixed(1)
@@ -216,8 +297,7 @@
       var box = el('div', 'report-event');
       r.events.forEach(function (e, i) {
         if (i) box.appendChild(el('br'));
-        var s = el('span', 'ev', '📢 ' + e.name);
-        box.appendChild(s);
+        box.appendChild(el('span', 'ev', '📢 ' + e.name));
         box.appendChild(document.createTextNode('：' + e.desc));
       });
       ev.appendChild(box);
@@ -229,8 +309,9 @@
     if (!r.samples.length) card.style.display = 'none';
     else {
       card.style.display = '';
-      r.samples.forEach(function (s) {
+      r.samples.forEach(function (s, i) {
         var q = el('div', 'quote ' + (s[0] === 'happy' ? 'happy' : 'angry'));
+        q.style.animationDelay = (0.1 + i * 0.12) + 's';
         q.appendChild(el('span', 'mood', s[0] === 'happy' ? '😍' : '😡'));
         q.appendChild(el('span', null, s[1]));
         ql.appendChild(q);
@@ -247,22 +328,23 @@
     badge.textContent = fr.grade;
     badge.className = 'grade-badge ' + fr.grade.toLowerCase();
     $('final-title').textContent = fr.grade_title;
-    $('final-profit').textContent = (fr.total_profit >= 0 ? '+' : '') + fmt0(fr.total_profit);
-    $('final-cash').textContent = fmt0(fr.cash);
-    $('final-rep').textContent = fr.avg_rep.toFixed(0);
+    countUp($('final-profit'), fr.total_profit, 900, fr.total_profit >= 0 ? '+¥' : '-¥');
+    countUp($('final-cash'), fr.cash, 900, '¥');
+    countUp($('final-rep'), fr.avg_rep, 900);
 
     var chart = $('final-chart');
     chart.innerHTML = '';
     var peak = 1;
     fr.history.forEach(function (r) { peak = Math.max(peak, Math.abs(r.revenue)); });
-    fr.history.forEach(function (r) {
+    fr.history.forEach(function (r, i) {
       var row = el('div', 'chart-row');
       row.appendChild(el('div', 'd', 'Day' + r.day));
       var bar = el('div', 'bar' + (r.profit < 0 ? ' neg' : ''));
-      bar.style.width = Math.max(2, Math.abs(r.revenue) / peak * 100) + '%';
       row.appendChild(bar);
       row.appendChild(el('div', 'v', fmt0(r.revenue)));
       chart.appendChild(row);
+      var target = Math.max(2, Math.abs(r.revenue) / peak * 100);
+      setTimeout(function () { bar.style.width = target + '%'; }, reduceMotion ? 0 : 200 + i * 90);
     });
 
     var hl = [];
@@ -274,11 +356,10 @@
     var plan = MCD.generate_plan(game);
     var pb = $('final-plan');
     pb.innerHTML = '';
-    var basket = el('div', 'plan-basket',
+    pb.appendChild(el('div', 'plan-basket',
       '根据你这局的表现，典型一单：' + plan.basket.map(function (b) {
         return b[0] + ' ' + fmt(b[1]);
-      }).join(' + ') + ' = ' + fmt(plan.base));
-    pb.appendChild(basket);
+      }).join(' + ') + ' = ' + fmt(plan.base)));
     pb.appendChild(el('div', 'plan-combo',
       '最优组合：' + plan.combo.label + ' → ' + fmt(plan.combo.total) + '（省 ' + fmt(plan.combo.saving) + '）'));
     var ul = document.createElement('ul');
@@ -305,6 +386,9 @@
   }
 
   function bindFinal() {
+    bindPress($('btn-next-day'));
+    bindPress($('btn-restart'));
+    bindPress($('btn-copy'));
     $('btn-next-day').addEventListener('click', function () {
       if (game.day >= MCD.CHALLENGE_DAYS) renderFinal();
       else { renderDay(); show('screen-day'); }
@@ -314,10 +398,11 @@
       setup = { marketing: 0 };
       renderDay();
       show('screen-day');
+      toast('新的一局，祝你好运');
     });
     $('btn-copy').addEventListener('click', function () {
       var text = $('share-text').textContent;
-      function done() { $('btn-copy').textContent = '已复制 ✓'; setTimeout(function () { $('btn-copy').textContent = '复制战绩文案'; }, 1500); }
+      function done() { toast('战绩文案已复制，去粘贴吧'); }
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
       } else { fallbackCopy(text); done(); }

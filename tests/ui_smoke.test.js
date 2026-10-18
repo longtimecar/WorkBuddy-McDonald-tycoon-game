@@ -13,7 +13,7 @@ function makeEl(id) {
     appendChild(c) { this.children.push(c); return c; },
     addEventListener(t, fn) { (this.listeners[t] = this.listeners[t] || []).push(fn); },
     click() { (this.listeners.click || []).forEach(f => f()); },
-    setAttribute() {}, select() {},
+    setAttribute() {}, select() {}, offsetWidth: 0,
   };
   return el;
 }
@@ -91,5 +91,5 @@ setTimeout(() => {
     R['btn-restart'].click();
     console.log('7. 重开 → 屏:', R['screen-day'].classList.contains('active') ? 'day OK' : 'FAIL', '| Day1:', R['day-title'].textContent);
     console.log('\n=== UI 全流程冒烟测试通过 ===');
-  }, 300);
-}, 300);
+  }, 2000);
+}, 2000);
